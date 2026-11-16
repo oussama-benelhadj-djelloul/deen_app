@@ -87,11 +87,13 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
         results = items.map((item) {
           final name = item['name'] ?? '';
           final country = item['country'] ?? '';
+          final region = item['admin1'] ?? '';
           return LocationSuggestion(
             displayName: country.isNotEmpty ? '$name، $country' : name,
             latitude: (item['latitude'] as num).toDouble(),
             longitude: (item['longitude'] as num).toDouble(),
             city: name,
+            region: region,
             country: country,
           );
         }).toList();
@@ -132,9 +134,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
           builder: (context) => PrayerTimesPage(
             latitude: _selectedLocation!.latitude,
             longitude: _selectedLocation!.longitude,
-            locationName: _selectedLocation!.city.isNotEmpty
-                ? _selectedLocation!.city
-                : _selectedLocation!.displayName,
+            locationName: _selectedLocation!.headerName,
           ),
         ),
       );
@@ -332,7 +332,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
                         if (_isSearching)
                           const Padding(
                             padding: EdgeInsets.only(top: 20),
-                            child: CircularProgressIndicator(),
+                            child: CircularProgressIndicator(color: Colors.grey),
                           ),
                       ],
                     ),
@@ -388,6 +388,7 @@ class LocationSuggestion {
   final double latitude;
   final double longitude;
   final String city;
+  final String region;
   final String country;
 
   LocationSuggestion({
@@ -395,6 +396,14 @@ class LocationSuggestion {
     required this.latitude,
     required this.longitude,
     required this.city,
+    required this.region,
     required this.country,
   });
+
+  // "City, Region" as shown in the prayer times header
+  String get headerName {
+    if (city.isEmpty) return displayName;
+    if (region.isEmpty || region == city) return city;
+    return '$city, $region';
+  }
 }
