@@ -306,7 +306,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       children: [
                         _buildPrayerTimeItem(
-                          'الفجر🌙',
+                          'الفجر',
                           _convertTo12Hour(_prayerTimes!.fajr),
                           hasNotification: true,
                         ),
