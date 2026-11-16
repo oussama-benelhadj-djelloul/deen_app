@@ -1,6 +1,7 @@
 import 'package:deen_app/prayertimes_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 
 class LocationPermissionPage extends StatefulWidget {
@@ -17,6 +18,8 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
   bool _isSearching = false;
   bool _showSuggestions = false;
   LocationSuggestion? _selectedLocation;
+  Timer? _debounce;
+  String _lastQuery = '';
 
   @override
   void initState() {
@@ -26,16 +29,30 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    if (_searchController.text.isEmpty) {
+    final query = _searchController.text.trim();
+
+    // The listener also fires on cursor/selection changes; only react to new text
+    if (query == _lastQuery) return;
+    _lastQuery = query;
+
+    _debounce?.cancel();
+
+    // Text was set by selecting a suggestion, don't search again
+    if (_selectedLocation != null && query == _selectedLocation!.city) return;
+    _selectedLocation = null;
+
+    if (query.isEmpty) {
       setState(() {
         _suggestions = [];
         _showSuggestions = false;
+        _isSearching = false;
       });
       return;
     }
@@ -45,61 +62,64 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
     });
 
     // Debounce the search
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (_searchController.text.isNotEmpty) {
-        _searchLocation(_searchController.text);
-      }
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _searchLocation(query);
     });
   }
 
   Future<void> _searchLocation(String query) async {
+    List<LocationSuggestion> results = [];
     try {
-      // Using Nominatim API (OpenStreetMap) - Free and no API key required
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=5&addressdetails=1&accept-language=ar',
-      );
+      // Using Open-Meteo geocoding API - Free and no API key required
+      final url = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
+        'name': query,
+        'count': '5',
+        'language': 'ar',
+        'format': 'json',
+      });
 
-      final response = await http.get(
-        url,
-        headers: {
-          'User-Agent': 'DinApp/1.0',
-        },
-      );
+      final response =
+          await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        setState(() {
-          _suggestions = data.map((item) {
-            return LocationSuggestion(
-              displayName: item['display_name'] ?? '',
-              latitude: double.parse(item['lat']),
-              longitude: double.parse(item['lon']),
-              city: item['address']?['city'] ??
-                  item['address']?['town'] ??
-                  item['address']?['village'] ?? '',
-              country: item['address']?['country'] ?? '',
-            );
-          }).toList();
-          _showSuggestions = _suggestions.isNotEmpty;
-          _isSearching = false;
-        });
+        final data = json.decode(response.body);
+        final List<dynamic> items = data['results'] ?? [];
+        results = items.map((item) {
+          final name = item['name'] ?? '';
+          final country = item['country'] ?? '';
+          return LocationSuggestion(
+            displayName: country.isNotEmpty ? '$name، $country' : name,
+            latitude: (item['latitude'] as num).toDouble(),
+            longitude: (item['longitude'] as num).toDouble(),
+            city: name,
+            country: country,
+          );
+        }).toList();
+      } else {
+        print('Location search failed: HTTP ${response.statusCode}');
       }
     } catch (e) {
       print('Error searching location: $e');
-      setState(() {
-        _isSearching = false;
-      });
     }
+
+    // Ignore stale responses if the user kept typing
+    if (!mounted || query != _searchController.text.trim()) return;
+
+    setState(() {
+      _suggestions = results;
+      _showSuggestions = results.isNotEmpty;
+      _isSearching = false;
+    });
   }
 
   void _selectLocation(LocationSuggestion location) {
+    _debounce?.cancel();
     setState(() {
       _selectedLocation = location;
-      _searchController.text = location.city.isNotEmpty
-          ? location.city
-          : location.displayName;
+      _searchController.text = location.city;
       _showSuggestions = false;
       _suggestions = [];
+      _isSearching = false;
     });
     _focusNode.unfocus();
   }
