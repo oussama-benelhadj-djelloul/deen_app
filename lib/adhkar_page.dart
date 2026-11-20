@@ -197,7 +197,7 @@ class _DhikrReaderViewState extends State<_DhikrReaderView> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.background,
       child: Padding(
         padding: const EdgeInsets.only(top: 12),
         child: Column(
@@ -223,7 +223,7 @@ class _DhikrReaderViewState extends State<_DhikrReaderView> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16 + MediaQuery.paddingOf(context).bottom),
           ],
         ),
       ),
@@ -306,7 +306,7 @@ class AdhkarHeader extends StatelessWidget {
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => Navigator.of(context).pop(),
-            child: const SizedBox(
+            child: SizedBox(
               width: 36,
               height: 36,
               child: Align(
@@ -361,13 +361,19 @@ class AdhkarListScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.background,
       child: GestureDetector(
         // Tap outside the field to dismiss the keyboard
         onTap: () => FocusScope.of(context).unfocus(),
         behavior: HitTestBehavior.translucent,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          // Bottom padding lets the last card scroll clear of the nav bar
+          padding: EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            24 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             AdhkarHeader(title: title, showBack: showBack),
             const SizedBox(height: 18),
@@ -399,7 +405,7 @@ class AppSearchField extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 24, color: AppColors.zinc400),
+          Icon(Icons.search, size: 24, color: AppColors.zinc400),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
@@ -407,7 +413,7 @@ class AppSearchField extends StatelessWidget {
               textInputAction: TextInputAction.search,
               cursorColor: AppColors.zinc600,
               style: AppTextStyles.input,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'البحث',
                 hintStyle: AppTextStyles.hint,
                 border: InputBorder.none,

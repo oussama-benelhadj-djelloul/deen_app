@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
 import 'package:intl/intl.dart' hide TextDirection;
+import 'package:flutter_svg/flutter_svg.dart';
 import 'design.dart';
 import 'adhkar_page.dart';
 import 'home_page.dart';
@@ -29,17 +31,28 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
   // Left to right, as shown in the nav bar
   static const _tabs = [
-    NavTab.svg('assets/icons/adhkar.svg', 'أذكار'),
-    NavTab(Icons.schedule, 'مواقيت الصلاة'),
+    NavTab.svg('assets/icons/adhkar.svg', 'الأذكار'),
+    NavTab(Icons.schedule, 'الصلاة'),
   ];
   static const _adhkarTab = 0;
   static const _prayerTab = 1;
   int _selectedTab = _prayerTab;
+  // Refreshes the countdown to the next prayer
+  Timer? _clock;
 
   @override
   void initState() {
     super.initState();
     _fetchPrayerTimes();
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchPrayerTimes() async {
@@ -83,7 +96,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
     final prayers = [
       {'name': 'الفجر', 'time': _prayerTimes!.fajr},
-      {'name': 'الشروق', 'time': _prayerTimes!.sunrise},
+      {'name': 'الصبح', 'time': _prayerTimes!.sunrise},
       {'name': 'الظهر', 'time': _prayerTimes!.dhuhr},
       {'name': 'العصر', 'time': _prayerTimes!.asr},
       {'name': 'المغرب', 'time': _prayerTimes!.maghrib},
@@ -122,7 +135,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       case 'الفجر':
         nextPrayerTimeStr = _prayerTimes!.fajr;
         break;
-      case 'الشروق':
+      case 'الصبح':
         nextPrayerTimeStr = _prayerTimes!.sunrise;
         break;
       case 'الظهر':
@@ -155,11 +168,26 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       nextPrayerDateTime = nextPrayerDateTime.add(const Duration(days: 1));
     }
 
-    final difference = nextPrayerDateTime.difference(now);
-    final hours = difference.inHours;
-    final minutes = difference.inMinutes % 60;
+    // Round up to whole minutes so it says "1 minute" until the prayer starts
+    final totalMinutes = (nextPrayerDateTime.difference(now).inSeconds / 60)
+        .ceil();
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
 
-    return '+${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
+    if (totalMinutes <= 0) return 'حان الآن';
+    final parts = [
+      if (hours > 0) _arabicCount(hours, 'ساعة', 'ساعتين', 'ساعات'),
+      if (minutes > 0) _arabicCount(minutes, 'دقيقة', 'دقيقتين', 'دقائق'),
+    ];
+    return 'بعد ${parts.join(' و')}';
+  }
+
+  // Arabic counted noun: 1 ساعة, 2 ساعتين, 3-10 ساعات, 11+ ساعة
+  String _arabicCount(int n, String one, String two, String few) {
+    if (n == 1) return one;
+    if (n == 2) return two;
+    if (n <= 10) return '$n $few';
+    return '$n $one';
   }
 
   String _convertTo12Hour(String time24) {
@@ -175,8 +203,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     if (_isLoading) return const _LoadingView();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
+      // Bottom handled per page so content can pass under the glass bar
       body: SafeArea(
+        bottom: false,
         child: TabSlideSwitcher(
           index: _selectedTab,
           child: _selectedTab == _prayerTab
@@ -193,11 +223,19 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               : ComingSoonView(tab: _tabs[_selectedTab]),
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(
-        tabs: _tabs,
-        selectedIndex: _selectedTab,
-        onTap: (i) => setState(() => _selectedTab = i),
-      ),
+      // The glass bar floats over the content, which scrolls behind it
+      extendBody: kUseGlassNavBar,
+      bottomNavigationBar: kUseGlassNavBar
+          ? AppGlassNavBar(
+              tabs: _tabs,
+              selectedIndex: _selectedTab,
+              onTap: (i) => setState(() => _selectedTab = i),
+            )
+          : AppBottomNavBar(
+              tabs: _tabs,
+              selectedIndex: _selectedTab,
+              onTap: (i) => setState(() => _selectedTab = i),
+            ),
     );
   }
 
@@ -225,7 +263,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _changeLocation,
-              child: const Text(
+              child: Text(
                 'تغيير',
                 style: TextStyle(
                   fontSize: 16,
@@ -236,7 +274,27 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            // Light / dark toggle: shows the mode a tap switches to (moon in
+            // light mode, sun in dark mode)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: AppTheme.toggle,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 11, right: 4),
+                child: SvgPicture.asset(
+                  AppTheme.isDark
+                      ? 'assets/icons/sun.svg'
+                      : 'assets/icons/moon.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter: ColorFilter.mode(
+                    AppColors.zinc700,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 widget.locationName,
@@ -244,7 +302,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 textAlign: TextAlign.right,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   leadingDistribution: TextLeadingDistribution.even,
                   height: 1.5,
@@ -253,7 +311,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               ),
             ),
             const SizedBox(width: 12),
-            const Icon(Icons.my_location, size: 22, color: AppColors.zinc500),
+            Icon(Icons.my_location, size: 22, color: AppColors.zinc500),
           ],
         ),
       ),
@@ -267,7 +325,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         children: [
           Text(
             _error!,
-            style: const TextStyle(fontSize: 18, color: Colors.red),
+            style: const TextStyle(fontSize: 18, color: AppColors.red500),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -297,7 +355,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               const Spacer(),
               _buildNextPrayerCard(),
               const SizedBox(height: 20),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 15),
                 child: SizedBox(
                   height: 32,
@@ -348,7 +406,14 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 _convertTo12Hour(_prayerTimes!.isha),
                 hasNotification: true,
               ),
-              const SizedBox(height: 14),
+              // Keeps the list above the nav bar (glass bar floats over).
+              // Builder reads the padding from inside the Scaffold, which
+              // includes the bar's height.
+              Builder(
+                builder: (context) => SizedBox(
+                  height: 14 + MediaQuery.paddingOf(context).bottom,
+                ),
+              ),
             ],
           ),
         ),
@@ -367,7 +432,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(
+          SizedBox(
             height: 23,
             child: Align(
               alignment: Alignment.centerRight,
@@ -386,28 +451,32 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: 22,
+            height: 28,
             child: Row(
               textDirection: TextDirection.ltr,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   _getTimeUntilNextPrayer(),
-                  style: const TextStyle(
+                  textDirection: TextDirection.rtl,
+                  style: TextStyle(
                     fontSize: 14,
                     height: 22 / 14,
                     leadingDistribution: TextLeadingDistribution.even,
-                    color: AppColors.zinc400,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.zinc500,
                   ),
                 ),
                 Text(
                   _getNextPrayer(),
                   textDirection: TextDirection.rtl,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 22 / 14,
+                  style: TextStyle(
+                    fontSize: 18,
+                    height: 28 / 18,
                     leadingDistribution: TextLeadingDistribution.even,
-                    color: AppColors.zinc400,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.zinc600,
                   ),
                 ),
               ],
@@ -440,7 +509,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
             const SizedBox(width: 13),
             Text(
               time,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.zinc600,
@@ -450,7 +519,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
             Text(
               name,
               textDirection: TextDirection.rtl,
-              style: const TextStyle(fontSize: 16, color: AppColors.zinc400),
+              style: TextStyle(fontSize: 16, color: AppColors.zinc400),
             ),
           ],
         ),
@@ -465,8 +534,8 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.white,
+    return Scaffold(
+      backgroundColor: AppColors.background,
       body: Center(
         child: Padding(
           // Design places the group 2.5pt below the screen's center
@@ -485,7 +554,7 @@ class _LoadingView extends StatelessWidget {
                       height: 40 / 32,
                       leadingDistribution: TextLeadingDistribution.even,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: AppColors.foreground,
                     ),
                   ),
                 ),

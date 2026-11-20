@@ -162,12 +162,12 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
         });
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: SizedBox(
                   height: 40,
@@ -181,14 +181,14 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
                         height: 40 / 32,
                         leadingDistribution: TextLeadingDistribution.even,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        color: AppColors.foreground,
                       ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 9),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   'نحتاج عنوانك لضبط مواقيت الصلاة والقبلة إن شاء الله.',
@@ -240,8 +240,8 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
                   child: ElevatedButton(
                     onPressed: _selectedLocation != null ? _handleNext : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.foreground,
+                      foregroundColor: AppColors.background,
                       disabledBackgroundColor: AppColors.zinc200,
                       disabledForegroundColor: AppColors.zinc400,
                       elevation: 0,
@@ -249,7 +249,9 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      // Buttons don't inherit the app font, so set it here
                       textStyle: const TextStyle(
+                        fontFamily: 'IBMPlexArabic',
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
@@ -285,7 +287,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
             height: 23,
             child: _isSearching
                 ? const Center(child: ArcSpinner())
-                : const Icon(
+                : Icon(
                     Icons.my_location,
                     size: 23,
                     color: AppColors.zinc400,
@@ -299,15 +301,17 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
               cursorColor: AppColors.zinc700,
-              style: const TextStyle(
+              style: TextStyle(
+                fontFamily: 'IBMPlexArabic',
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: AppColors.zinc700,
               ),
-              decoration: const InputDecoration.collapsed(
+              decoration: InputDecoration.collapsed(
                 hintText: 'أدخل مدينتك من فضلك.',
                 hintTextDirection: TextDirection.rtl,
                 hintStyle: TextStyle(
+                  fontFamily: 'IBMPlexArabic',
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: AppColors.zinc400,
@@ -339,7 +343,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
         shrinkWrap: true,
         padding: EdgeInsets.zero,
         itemCount: _suggestions.length,
-        separatorBuilder: (context, index) => const Divider(
+        separatorBuilder: (context, index) => Divider(
           height: 1,
           thickness: 1,
           indent: 16,
@@ -360,7 +364,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
                         ? suggestion.city
                         : suggestion.displayName,
                     textDirection: TextDirection.rtl,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: AppColors.zinc700,
@@ -373,7 +377,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
                         suggestion.country,
                       ].where((s) => s.isNotEmpty).toSet().join('، '),
                       textDirection: TextDirection.rtl,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: AppColors.zinc400,
                       ),

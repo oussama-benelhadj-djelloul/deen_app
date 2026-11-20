@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
+import 'design.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -73,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return GestureDetector(
       onTap: _goToHomePage,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         body: Column(
           children: [
             // Centered content with animation
@@ -85,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     opacity: _fadeAnimation,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Text(
                           "🌿 مرحبا بك",
                           style: TextStyle(
@@ -96,7 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         SizedBox(height: 12),
                         Text(
                           "في تطبيق دين",
-                          style: TextStyle(fontSize: 32, color: Colors.grey),
+                          style: TextStyle(fontSize: 32, color: AppColors.zinc400),
                         ),
                       ],
                     ),
@@ -106,7 +107,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
 
             // Bottom text
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 42),
               child: Directionality(
                 textDirection: TextDirection.rtl,
@@ -115,7 +116,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey,
+                    color: AppColors.zinc400,
                   ),
                 ),
               ),
