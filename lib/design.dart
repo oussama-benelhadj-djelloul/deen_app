@@ -104,28 +104,41 @@ class NavTab {
   final IconData? icon;
   // Asset path of a custom SVG icon, used instead of [icon] when set
   final String? svg;
+  // Filled variants shown when the tab is selected
+  final IconData? selectedIcon;
+  final String? selectedSvg;
   final String label;
-  const NavTab(IconData this.icon, this.label) : svg = null;
-  const NavTab.svg(String this.svg, this.label) : icon = null;
+  const NavTab(IconData this.icon, this.label, {this.selectedIcon})
+    : svg = null,
+      selectedSvg = null;
+  const NavTab.svg(String this.svg, this.label, {this.selectedSvg})
+    : icon = null,
+      selectedIcon = null;
 }
 
-// Draws a tab's icon (material or SVG) at a given size and color
+// Draws a tab's icon (material or SVG) at a given size and color. When
+// [selected], uses the tab's filled variant if it has one.
 class NavTabIcon extends StatelessWidget {
   final NavTab tab;
   final double size;
   final Color color;
+  final bool selected;
 
   const NavTabIcon({
     super.key,
     required this.tab,
     required this.size,
     required this.color,
+    this.selected = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final svg = tab.svg;
-    if (svg == null) return Icon(tab.icon, size: size, color: color);
+    final svg = selected ? (tab.selectedSvg ?? tab.svg) : tab.svg;
+    if (svg == null) {
+      final icon = selected ? (tab.selectedIcon ?? tab.icon) : tab.icon;
+      return Icon(icon, size: size, color: color);
+    }
     // SVGs are drawn on an 18pt grid with almost no padding, while material
     // icons have ~2pt padding in their box, so scale down to match visually
     return SizedBox(
@@ -548,7 +561,12 @@ class AppGlassNavBar extends StatelessWidget {
           builder: (context, c, _) => Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              NavTabIcon(tab: tabs[i], size: 24, color: c ?? color),
+              NavTabIcon(
+                tab: tabs[i],
+                size: 24,
+                color: c ?? color,
+                selected: selected,
+              ),
               const SizedBox(height: 2),
               Text(
                 tabs[i].label,

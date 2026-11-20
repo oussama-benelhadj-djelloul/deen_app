@@ -31,8 +31,12 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
   // Left to right, as shown in the nav bar
   static const _tabs = [
-    NavTab.svg('assets/icons/adhkar.svg', 'الأذكار'),
-    NavTab(Icons.schedule, 'الصلاة'),
+    NavTab.svg(
+      'assets/icons/adhkar.svg',
+      'الأذكار',
+      selectedSvg: 'assets/icons/adhkar_filled.svg',
+    ),
+    NavTab(Icons.schedule, 'الصلاة', selectedIcon: Icons.watch_later),
   ];
   static const _adhkarTab = 0;
   static const _prayerTab = 1;
@@ -379,40 +383,33 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               _buildPrayerTimeItem(
                 'الفجر',
                 _convertTo12Hour(_prayerTimes!.fajr),
-                hasNotification: true,
               ),
               _buildPrayerTimeItem(
                 'الصبح',
                 _convertTo12Hour(_prayerTimes!.sunrise),
-                hasNotification: false,
               ),
               _buildPrayerTimeItem(
                 'الظهر',
                 _convertTo12Hour(_prayerTimes!.dhuhr),
-                hasNotification: false,
               ),
               _buildPrayerTimeItem(
                 'العصر',
                 _convertTo12Hour(_prayerTimes!.asr),
-                hasNotification: false,
               ),
               _buildPrayerTimeItem(
                 'المغرب',
                 _convertTo12Hour(_prayerTimes!.maghrib),
-                hasNotification: true,
               ),
               _buildPrayerTimeItem(
                 'العشاء',
                 _convertTo12Hour(_prayerTimes!.isha),
-                hasNotification: true,
               ),
               // Keeps the list above the nav bar (glass bar floats over).
               // Builder reads the padding from inside the Scaffold, which
               // includes the bar's height.
               Builder(
-                builder: (context) => SizedBox(
-                  height: 14 + MediaQuery.paddingOf(context).bottom,
-                ),
+                builder: (context) =>
+                    SizedBox(height: 14 + MediaQuery.paddingOf(context).bottom),
               ),
             ],
           ),
@@ -487,26 +484,14 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     );
   }
 
-  Widget _buildPrayerTimeItem(
-    String name,
-    String time, {
-    bool hasNotification = false,
-  }) {
+  Widget _buildPrayerTimeItem(String name, String time) {
     return Padding(
-      padding: const EdgeInsets.only(left: 13, right: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       child: SizedBox(
         height: 38.66,
         child: Row(
           textDirection: TextDirection.ltr,
           children: [
-            Icon(
-              hasNotification
-                  ? Icons.volume_up_outlined
-                  : Icons.volume_off_outlined,
-              color: hasNotification ? AppColors.zinc600 : AppColors.zinc300,
-              size: 22,
-            ),
-            const SizedBox(width: 13),
             Text(
               time,
               style: TextStyle(
