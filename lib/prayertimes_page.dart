@@ -2,16 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart' hide TextDirection;
-
-// Design colors (Tailwind zinc scale, as used in the Figma design)
-const _zinc50 = Color(0xFFFAFAFA);
-const _zinc100 = Color(0xFFF4F4F5);
-const _zinc200 = Color(0xFFE4E4E7);
-const _zinc300 = Color(0xFFD4D4D8);
-const _zinc400 = Color(0xFF9F9FA9);
-const _zinc500 = Color(0xFF71717B);
-const _zinc600 = Color(0xFF52525C);
-const _zinc700 = Color(0xFF3F3F47);
+import 'design.dart';
+import 'adhkar_page.dart';
+import 'home_page.dart';
 
 class PrayerTimesPage extends StatefulWidget {
   final double latitude;
@@ -34,6 +27,15 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   bool _isLoading = true;
   String? _error;
 
+  // Left to right, as shown in the nav bar
+  static const _tabs = [
+    NavTab.svg('assets/icons/adhkar.svg', 'أذكار'),
+    NavTab(Icons.schedule, 'مواقيت الصلاة'),
+  ];
+  static const _adhkarTab = 0;
+  static const _prayerTab = 1;
+  int _selectedTab = _prayerTab;
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +49,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
       // Using Aladhan API - Free Islamic Prayer Times API
       final url = Uri.parse(
-        'http://api.aladhan.com/v1/timings/$dateString?latitude=${widget.latitude}&longitude=${widget.longitude}&method=2',
+        'https://api.aladhan.com/v1/timings/$dateString?latitude=${widget.latitude}&longitude=${widget.longitude}&method=2',
       );
 
       final response = await http.get(url);
@@ -175,17 +177,41 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _error != null ? _buildError() : _buildContent(),
-            ),
-          ],
+        child: TabSlideSwitcher(
+          index: _selectedTab,
+          child: _selectedTab == _prayerTab
+              ? Column(
+                  children: [
+                    _buildHeader(),
+                    Expanded(
+                      child: _error != null ? _buildError() : _buildContent(),
+                    ),
+                  ],
+                )
+              : _selectedTab == _adhkarTab
+              ? const AdhkarPage()
+              : ComingSoonView(tab: _tabs[_selectedTab]),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: AppBottomNavBar(
+        tabs: _tabs,
+        selectedIndex: _selectedTab,
+        onTap: (i) => setState(() => _selectedTab = i),
+      ),
     );
+  }
+
+  // When the app opened directly on this page (saved location) there is no
+  // location page underneath to go back to, so open it instead.
+  void _changeLocation() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const LocationPermissionPage()),
+      );
+    }
   }
 
   Widget _buildHeader() {
@@ -198,14 +224,15 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           children: [
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.pop(context),
+              onTap: _changeLocation,
               child: const Text(
                 'تغيير',
                 style: TextStyle(
                   fontSize: 16,
+                  leadingDistribution: TextLeadingDistribution.even,
                   height: 1.5,
                   fontWeight: FontWeight.w600,
-                  color: _zinc700,
+                  color: AppColors.zinc700,
                 ),
               ),
             ),
@@ -219,13 +246,14 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 16,
+                  leadingDistribution: TextLeadingDistribution.even,
                   height: 1.5,
-                  color: _zinc400,
+                  color: AppColors.zinc400,
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Icon(Icons.my_location, size: 22, color: _zinc500),
+            const Icon(Icons.my_location, size: 22, color: AppColors.zinc500),
           ],
         ),
       ),
@@ -280,8 +308,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       textDirection: TextDirection.rtl,
                       style: TextStyle(
                         fontSize: 24,
+                        height: 32 / 24,
+                        leadingDistribution: TextLeadingDistribution.even,
                         fontWeight: FontWeight.w700,
-                        color: _zinc600,
+                        color: AppColors.zinc600,
                       ),
                     ),
                   ),
@@ -331,7 +361,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       margin: const EdgeInsets.symmetric(horizontal: 15),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       decoration: BoxDecoration(
-        color: _zinc100,
+        color: AppColors.zinc100,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -346,8 +376,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                 textDirection: TextDirection.rtl,
                 style: TextStyle(
                   fontSize: 16,
+                  height: 23 / 16,
+                  leadingDistribution: TextLeadingDistribution.even,
                   fontWeight: FontWeight.w500,
-                  color: _zinc600,
+                  color: AppColors.zinc600,
                 ),
               ),
             ),
@@ -361,48 +393,27 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               children: [
                 Text(
                   _getTimeUntilNextPrayer(),
-                  style: const TextStyle(fontSize: 14, color: _zinc400),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 22 / 14,
+                    leadingDistribution: TextLeadingDistribution.even,
+                    color: AppColors.zinc400,
+                  ),
                 ),
                 Text(
                   _getNextPrayer(),
                   textDirection: TextDirection.rtl,
-                  style: const TextStyle(fontSize: 14, color: _zinc400),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 22 / 14,
+                    leadingDistribution: TextLeadingDistribution.even,
+                    color: AppColors.zinc400,
+                  ),
                 ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: _zinc50,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      // Background extends under the home indicator, items stay above it
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 12),
-          child: Row(
-            textDirection: TextDirection.ltr,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildNavItem(Icons.dark_mode_outlined),
-              const SizedBox(width: 8),
-              _buildNavItem(Icons.audio_file_outlined),
-              const SizedBox(width: 8),
-              _buildNavItem(Icons.explore_outlined),
-              const SizedBox(width: 8),
-              _buildNavItem(Icons.history_edu_outlined),
-              const SizedBox(width: 8),
-              _buildSelectedNavItem(Icons.schedule, 'مواقيت الصلاة'),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -423,7 +434,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               hasNotification
                   ? Icons.volume_up_outlined
                   : Icons.volume_off_outlined,
-              color: hasNotification ? _zinc600 : _zinc300,
+              color: hasNotification ? AppColors.zinc600 : AppColors.zinc300,
               size: 22,
             ),
             const SizedBox(width: 13),
@@ -432,53 +443,17 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: _zinc600,
+                color: AppColors.zinc600,
               ),
             ),
             const Spacer(),
             Text(
               name,
               textDirection: TextDirection.rtl,
-              style: const TextStyle(fontSize: 16, color: _zinc400),
+              style: const TextStyle(fontSize: 16, color: AppColors.zinc400),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon) {
-    return SizedBox(
-      width: 42,
-      height: 32,
-      child: Icon(icon, color: _zinc500, size: 20),
-    );
-  }
-
-  Widget _buildSelectedNavItem(IconData icon, String label) {
-    return Container(
-      height: 32,
-      padding: const EdgeInsets.only(left: 12, right: 11),
-      decoration: BoxDecoration(
-        color: _zinc200,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        textDirection: TextDirection.ltr,
-        children: [
-          Text(
-            label,
-            textDirection: TextDirection.rtl,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: _zinc600,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Icon(icon, color: _zinc600, size: 20),
-        ],
       ),
     );
   }
@@ -507,6 +482,8 @@ class _LoadingView extends StatelessWidget {
                     textDirection: TextDirection.rtl,
                     style: TextStyle(
                       fontSize: 32,
+                      height: 40 / 32,
+                      leadingDistribution: TextLeadingDistribution.even,
                       fontWeight: FontWeight.w700,
                       color: Colors.black,
                     ),
@@ -520,54 +497,19 @@ class _LoadingView extends StatelessWidget {
                   child: Text(
                     'امنحنا دقيقة، نحن نُهيّئ كل شيء لك بهدوء.',
                     textDirection: TextDirection.rtl,
-                    style: TextStyle(fontSize: 16, color: _zinc400),
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 24 / 16,
+                      leadingDistribution: TextLeadingDistribution.even,
+                      color: AppColors.zinc400,
+                    ),
                   ),
                 ),
               ),
               SizedBox(height: 16.25),
-              _ArcSpinner(),
+              ArcSpinner(),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// Three-quarter ring that rotates, as in the design
-class _ArcSpinner extends StatefulWidget {
-  const _ArcSpinner();
-
-  @override
-  State<_ArcSpinner> createState() => _ArcSpinnerState();
-}
-
-class _ArcSpinnerState extends State<_ArcSpinner>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: _controller,
-      child: const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(
-          value: 0.75,
-          strokeWidth: 2,
-          strokeCap: StrokeCap.round,
-          color: _zinc300,
-          backgroundColor: Colors.transparent,
         ),
       ),
     );

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 
-
-
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -32,9 +30,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Fade in
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _controller.forward(); // start the animation
   }
@@ -45,82 +44,85 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
+  bool _isNavigating = false;
+
   void _goToHomePage() {
+    // Ignore extra taps while the transition is running
+    if (_isNavigating) return;
+    _isNavigating = true;
+
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const LocationPermissionPage(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const LocationPermissionPage(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          // Use a fade transition
+          // Quick, simple fade
           return FadeTransition(
-            opacity: animation,
+            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 2000), // fade duration
+        transitionDuration: const Duration(milliseconds: 250),
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: _goToHomePage,
       child: Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Centered content with animation
-          Expanded(
-            child: Center(
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        "🌿 مرحبا بك",
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            // Centered content with animation
+            Expanded(
+              child: Center(
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          "🌿 مرحبا بك",
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        "في تطبيق دين",
-                        style: TextStyle(
-                          fontSize: 32,
-                          color: Colors.grey,
+                        SizedBox(height: 12),
+                        Text(
+                          "في تطبيق دين",
+                          style: TextStyle(fontSize: 32, color: Colors.grey),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          // Bottom text
-          const Padding(
-            padding: EdgeInsets.only(bottom: 42),
-            child: Directionality(
-              textDirection: TextDirection.rtl,
-              child: Text(
-                "اضغط في أي مكان للبدء.",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+            // Bottom text
+            const Padding(
+              padding: EdgeInsets.only(bottom: 42),
+              child: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Text(
+                  "اضغط في أي مكان للبدء.",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }

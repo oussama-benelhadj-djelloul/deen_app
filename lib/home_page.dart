@@ -1,4 +1,5 @@
 import 'package:deen_app/prayertimes_page.dart';
+import 'package:deen_app/design.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
@@ -73,30 +74,32 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
       // Using Open-Meteo geocoding API - Free and no API key required
       final url = Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
         'name': query,
-        'count': '5',
+        'count': '3', // Max 3 so the list never overlaps the button below
         'language': 'ar',
         'format': 'json',
       });
 
-      final response =
-          await http.get(url).timeout(const Duration(seconds: 10));
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> items = data['results'] ?? [];
-        results = items.map((item) {
-          final name = item['name'] ?? '';
-          final country = item['country'] ?? '';
-          final region = item['admin1'] ?? '';
-          return LocationSuggestion(
-            displayName: country.isNotEmpty ? '$name، $country' : name,
-            latitude: (item['latitude'] as num).toDouble(),
-            longitude: (item['longitude'] as num).toDouble(),
-            city: name,
-            region: region,
-            country: country,
-          );
-        }).toList();
+        results = items
+            .map((item) {
+              final name = item['name'] ?? '';
+              final country = item['country'] ?? '';
+              final region = item['admin1'] ?? '';
+              return LocationSuggestion(
+                displayName: country.isNotEmpty ? '$name، $country' : name,
+                latitude: (item['latitude'] as num).toDouble(),
+                longitude: (item['longitude'] as num).toDouble(),
+                city: name,
+                region: region,
+                country: country,
+              );
+            })
+            .take(3)
+            .toList();
       } else {
         print('Location search failed: HTTP ${response.statusCode}');
       }
@@ -127,18 +130,19 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
   }
 
   void _handleNext() {
-    if (_selectedLocation != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PrayerTimesPage(
-            latitude: _selectedLocation!.latitude,
-            longitude: _selectedLocation!.longitude,
-            locationName: _selectedLocation!.headerName,
-          ),
+    final location = _selectedLocation;
+    if (location == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PrayerTimesPage(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          locationName: location.headerName,
         ),
-      );
-    }
+      ),
+    );
   }
 
   void _useCurrentLocation() async {
@@ -158,219 +162,101 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
         });
       },
       child: Scaffold(
-        backgroundColor: Colors.grey.shade200,
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Main content
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 60),
-
-                        // Title with icon and text
-                        const Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "🗺️",
-                                style: TextStyle(fontSize: 32),
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                "أين أنت الآن؟",
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Subtitle
-                        const Directionality(
-                          textDirection: TextDirection.rtl,
-                          child: Text(
-                            "نحتاج عنوانك لضبط مواقيت الصلاة والقبلة إن شاء الله.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // Location search field
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Directionality(
-                            textDirection: TextDirection.rtl,
-                            child: TextField(
-                              controller: _searchController,
-                              focusNode: _focusNode,
-                              textDirection: TextDirection.rtl,
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: "أدخِل مدينتك من فضلك.",
-                                hintStyle: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey.shade500,
-                                ),
-                                prefixIcon: const Padding(
-                                  padding: EdgeInsets.only(right: 12, left: 12),
-                                  child: Icon(
-                                    Icons.my_location,
-                                    color: Colors.grey,
-                                    size: 24,
-                                  ),
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                              ),
-                              onTap: () {
-                                setState(() {
-                                  if (_suggestions.isNotEmpty) {
-                                    _showSuggestions = true;
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-
-                        // Search suggestions
-                        if (_showSuggestions && _suggestions.isNotEmpty)
-                          Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _suggestions.length,
-                              separatorBuilder: (context, index) => Divider(
-                                height: 1,
-                                color: Colors.grey.shade200,
-                              ),
-                              itemBuilder: (context, index) {
-                                final suggestion = _suggestions[index];
-                                return ListTile(
-                                  onTap: () => _selectLocation(suggestion),
-                                  title: Directionality(
-                                    textDirection: TextDirection.rtl,
-                                    child: Text(
-                                      suggestion.city.isNotEmpty
-                                          ? suggestion.city
-                                          : suggestion.displayName,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                  ),
-                                  subtitle: suggestion.city.isNotEmpty
-                                      ? Directionality(
-                                    textDirection: TextDirection.rtl,
-                                    child: Text(
-                                      suggestion.country,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                  )
-                                      : null,
-                                  trailing: const Icon(
-                                    Icons.location_on_outlined,
-                                    color: Colors.grey,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-
-                        if (_isSearching)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 20),
-                            child: CircularProgressIndicator(color: Colors.grey),
-                          ),
-                      ],
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: SizedBox(
+                  height: 40,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'أين أنت الآن؟ 🗺️',
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        fontSize: 32,
+                        height: 40 / 32,
+                        leadingDistribution: TextLeadingDistribution.even,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),
               ),
+              const SizedBox(height: 9),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'نحتاج عنوانك لضبط مواقيت الصلاة والقبلة إن شاء الله.',
+                  textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                    color: AppColors.zinc400,
+                  ),
+                ),
+              ),
 
-              // Bottom button
+              // Search field, centered in the free space. Suggestions open
+              // below it without moving it.
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Stack(
+                      children: [
+                        Positioned(
+                          top: (constraints.maxHeight / 2 - 23).clamp(
+                            0.0,
+                            double.infinity,
+                          ),
+                          left: 16,
+                          right: 16,
+                          bottom: 0,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildSearchField(),
+                              if (_showSuggestions && _suggestions.isNotEmpty)
+                                Flexible(child: _buildSuggestions()),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 child: SizedBox(
-                  width: double.infinity,
+                  height: 46,
                   child: ElevatedButton(
                     onPressed: _selectedLocation != null ? _handleNext : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _selectedLocation != null
-                          ? Colors.blue
-                          : Colors.grey.shade300,
-                      foregroundColor: _selectedLocation != null
-                          ? Colors.white
-                          : Colors.grey.shade600,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.zinc200,
+                      disabledForegroundColor: AppColors.zinc400,
+                      elevation: 0,
+                      padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 0,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      disabledForegroundColor: Colors.grey.shade600,
-                    ),
-                    child: const Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Text(
-                        "التالي",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
+                    child: const Text(
+                      'التالي',
+                      textDirection: TextDirection.rtl,
                     ),
                   ),
                 ),
@@ -378,6 +264,125 @@ class _LocationPermissionPageState extends State<LocationPermissionPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.only(left: 12, right: 12),
+      decoration: BoxDecoration(
+        color: AppColors.zinc100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        children: [
+          // Spinner takes the icon's place while searching
+          SizedBox(
+            width: 23,
+            height: 23,
+            child: _isSearching
+                ? const Center(child: ArcSpinner())
+                : const Icon(
+                    Icons.my_location,
+                    size: 23,
+                    color: AppColors.zinc400,
+                  ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              focusNode: _focusNode,
+              textDirection: TextDirection.rtl,
+              textAlign: TextAlign.right,
+              cursorColor: AppColors.zinc700,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: AppColors.zinc700,
+              ),
+              decoration: const InputDecoration.collapsed(
+                hintText: 'أدخل مدينتك من فضلك.',
+                hintTextDirection: TextDirection.rtl,
+                hintStyle: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.zinc400,
+                ),
+              ),
+              onTap: () {
+                setState(() {
+                  if (_suggestions.isNotEmpty) {
+                    _showSuggestions = true;
+                  }
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestions() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: AppColors.zinc100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: _suggestions.length,
+        separatorBuilder: (context, index) => const Divider(
+          height: 1,
+          thickness: 1,
+          indent: 16,
+          endIndent: 16,
+          color: AppColors.zinc200,
+        ),
+        itemBuilder: (context, index) {
+          final suggestion = _suggestions[index];
+          return InkWell(
+            onTap: () => _selectLocation(suggestion),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    suggestion.city.isNotEmpty
+                        ? suggestion.city
+                        : suggestion.displayName,
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.zinc700,
+                    ),
+                  ),
+                  if (suggestion.country.isNotEmpty)
+                    Text(
+                      [
+                        suggestion.region,
+                        suggestion.country,
+                      ].where((s) => s.isNotEmpty).toSet().join('، '),
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.zinc400,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
